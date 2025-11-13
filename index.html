@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini Interaktif — Kuis</title>
+  <style>
+    body {font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif; margin: 0; padding: 24px; background:#f7f7fb;}
+    .card {max-width:760px; margin:24px auto; background:white; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); padding:20px;}
+    h1{margin:0 0 12px; font-size:20px}
+    .question{margin:16px 0}
+    .choices button{display:block; width:100%; margin:8px 0; padding:10px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; text-align:left;}
+    .choices button:hover{transform:translateY(-1px)}
+    .hidden{display:none}
+    .footer{display:flex; justify-content:space-between; gap:12px; margin-top:12px}
+    .btn{padding:10px 14px; border-radius:8px; border:none; cursor:pointer;}
+    .primary{background:#2563eb;color:#fff}
+    .muted{background:#eef2ff}
+    .score{font-weight:600}
+    .progress{height:10px; background:#eee; border-radius:999px; overflow:hidden; margin:12px 0}
+    .progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,#60a5fa,#7c3aed)}
+  </style>
+</head>
+<body>
+  <div class="card" role="application" aria-label="Kuis singkat">
+    <h1>Mini Kuis Interaktif</h1>
+    <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+    <div id="stage">
+      <!-- Question will be injected here -->
+    </div>
+
+    <div class="footer">
+      <button id="prev" class="btn muted">Prev</button>
+      <div style="flex:1"></div>
+      <button id="next" class="btn primary">Next</button>
+    </div>
+
+    <div id="result" class="hidden" style="margin-top:16px">
+      <p class="score">Skor: <span id="scoreVal">0</span> / <span id="totalQ">0</span></p>
+      <button id="restart" class="btn">Mulai Ulang</button>
+    </div>
+  </div>
+
+  <script>
+    const qa = [
+      {q:"Ibu Pertiwi adalah sebutan untuk..", choices:["Presiden","Tanah air / negeri","Ibu negara","Sungai"], a:1},
+      {q:"Apa warna bendera Indonesia?", choices:["Merah Putih","Biru Putih","Hijau Kuning","Hitam Putih"], a:0},
+      {q:"Ibu kota Indonesia adalah..", choices:["Surabaya","Bandung","Jakarta","Medan"], a:2}
+    ];
+
+    const stage = document.getElementById('stage');
+    const bar = document.getElementById('bar');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    const result = document.getElementById('result');
+    const scoreVal = document.getElementById('scoreVal');
+    const totalQ = document.getElementById('totalQ');
+    const restart = document.getElementById('restart');
+
+    let idx = 0;
+    let answers = Array(qa.length).fill(null);
+
+    totalQ.textContent = qa.length;
+
+    function render() {
+      const item = qa[idx];
+      stage.innerHTML = `
+        <div class="question" aria-live="polite"><strong>Soal ${idx+1}.</strong> ${item.q}</div>
+        <div class="choices">
+          ${item.choices.map((c,i)=>`<button data-i="${i}" ${answers[idx]===i?'aria-pressed="true"':''}>${c}</button>`).join('')}
+        </div>
+      `;
+      // update progress
+      const pct = Math.round((idx/qa.length)*100);
+      bar.style.width = pct + '%';
+
+      // button states
+      prev.disabled = idx===0;
+      next.textContent = idx === qa.length-1 ? 'Submit' : 'Next';
+
+      // attach choice handlers
+      stage.querySelectorAll('.choices button').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const choice = Number(btn.dataset.i);
+          answers[idx] = choice;
+          // visual feedback
+          stage.querySelectorAll('.choices button').forEach(b=>b.style.borderColor='#ddd');
+          btn.style.borderColor='#2563eb';
+        });
+      });
+    }
+
+    prev.addEventListener('click', ()=>{
+      if(idx>0){ idx--; render(); }
+    });
+
+    next.addEventListener('click', ()=>{
+      if(idx < qa.length-1){
+        idx++; render();
+      } else {
+        // Submit
+        if(answers.includes(null)){
+          if(!confirm('Beberapa jawaban kosong. Tetap submit?')) return;
+        }
+        showResult();
+      }
+    });
+
+    function showResult(){
+      let score = 0;
+      answers.forEach((ans,i)=>{ if(ans===qa[i].a) score++; });
+      scoreVal.textContent = score;
+      document.getElementById('bar').style.width = '100%';
+      result.classList.remove('hidden');
+      // hide stage & nav
+      stage.classList.add('hidden');
+      prev.style.display = 'none';
+      next.style.display = 'none';
+    }
+
+    restart.addEventListener('click', ()=>{
+      idx = 0; answers = Array(qa.length).fill(null); result.classList.add('hidden');
+      stage.classList.remove('hidden'); prev.style.display='inline-block'; next.style.display='inline-block';
+      render();
+    });
+
+    // initial render
+    render();
+  </script>
+</body>
+</html>
