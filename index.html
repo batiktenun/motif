@@ -1,131 +1,457 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mini Interaktif — Kuis</title>
-  <style>
-    body {font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif; margin: 0; padding: 24px; background:#f7f7fb;}
-    .card {max-width:760px; margin:24px auto; background:white; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); padding:20px;}
-    h1{margin:0 0 12px; font-size:20px}
-    .question{margin:16px 0}
-    .choices button{display:block; width:100%; margin:8px 0; padding:10px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; text-align:left;}
-    .choices button:hover{transform:translateY(-1px)}
-    .hidden{display:none}
-    .footer{display:flex; justify-content:space-between; gap:12px; margin-top:12px}
-    .btn{padding:10px 14px; border-radius:8px; border:none; cursor:pointer;}
-    .primary{background:#2563eb;color:#fff}
-    .muted{background:#eef2ff}
-    .score{font-weight:600}
-    .progress{height:10px; background:#eee; border-radius:999px; overflow:hidden; margin:12px 0}
-    .progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,#60a5fa,#7c3aed)}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Puzzle Pengenalan Motif Batik — 5 Level</title>
+<style>
+  :root{
+    --size: 330px; /* ukuran area puzzle */
+    --tile-gap: 6px;
+    --cols: 3;
+  }
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans",sans-serif; margin:18px; background:#fbfbfe; color:#0f172a}
+  .wrap{max-width:920px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  h1{font-size:18px;margin:0}
+  .controls{display:flex;gap:8px;align-items:center}
+  button{cursor:pointer;padding:8px 12px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:white}
+  .primary{background:#2563eb;color:white;border:none}
+  .muted{background:#eef2ff}
+  .wrap-game{display:flex;flex-wrap:wrap;gap:18px}
+  .panel{background:white;padding:14px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.06);flex:1 1 520px;min-width:320px}
+  .puzzle-area{width:var(--size);height:var(--size);position:relative;margin:0 auto;background:#fff;border-radius:10px;padding:12px;box-sizing:border-box;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-auto-rows:1fr;gap:var(--tile-gap)}
+  .slot{background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+  .tile{
+    width:100%;height:100%;border-radius:6px;border:1px solid rgba(2,6,23,0.06);
+    background-size: calc(var(--size) - (var(--tile-gap) * (var(--cols) - 1))) calc(var(--size) - (var(--tile-gap) * (var(--cols) - 1)));
+    background-repeat:no-repeat; background-color:transparent;
+    box-sizing:border-box; user-select:none; touch-action:none;
+  }
+  .tray{display:grid;grid-template-columns:repeat(3,1fr);gap:8px; margin-top:12px}
+  .tray .tile{height:90px; cursor:grab}
+  .tray .tile:active{cursor:grabbing}
+  .meta{display:flex;flex-direction:column;gap:8px}
+  .info{font-size:14px;color:#334155}
+  .levelBadge{background:#f8fafc;padding:4px 8px;border-radius:999px;font-weight:600}
+  .hidden{display:none}
+  .hint{font-size:13px;color:#475569;background:#f1f5f9;padding:8px;border-radius:8px}
+  footer{margin-top:14px;text-align:center;color:#475569;font-size:13px}
+  @media(max-width:880px){
+    .wrap-game{flex-direction:column}
+    .panel{min-width:unset}
+  }
+</style>
 </head>
 <body>
-  <div class="card" role="application" aria-label="Kuis singkat">
-    <h1>Mini Kuis Interaktif</h1>
-    <div class="progress" aria-hidden="true"><i id="bar"></i></div>
-    <div id="stage">
-      <!-- Question will be injected here -->
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Puzzle Pengenalan Motif Batik — 5 Level</h1>
+        <div style="font-size:13px;color:#475569">Susun potongan gambar sampai menjadi motif batik lengkap.</div>
+      </div>
+      <div class="controls">
+        <div class="levelBadge" id="levelBadge">Level 1</div>
+        <button id="hintBtn" class="muted">Hint</button>
+        <button id="restartBtn">Restart</button>
+        <button id="nextBtn" class="primary">Next Level</button>
+      </div>
+    </header>
+
+    <div class="wrap-game">
+      <div class="panel" aria-label="Area permainan">
+        <div class="puzzle-area" id="puzzleArea" role="application" aria-describedby="hintText"></div>
+        <div style="text-align:center;margin-top:8px;font-size:13px;color:#334155">Seret potongan dari bawah ke kotak di atas untuk menyusun.</div>
+      </div>
+
+      <div class="panel" aria-label="Informasi">
+        <div class="meta">
+          <div class="info"><strong>Motif saat ini:</strong> <span id="motifName">Semen</span></div>
+          <div class="info"><strong>Instruksi singkat:</strong> Susun potongan agar membentuk gambar motif utuh. Ada 3×3 potongan.</div>
+          <div id="hintText" class="hint hidden"></div>
+          <div style="margin-top:6px">
+            <strong>Tray potongan:</strong>
+            <div class="tray" id="trayArea"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <div><strong>Skor</strong><div id="score" style="font-weight:700">0</div></div>
+            <div><strong>Level</strong><div id="level" style="font-weight:700">1 / 5</div></div>
+            <div><strong>Moves</strong><div id="moves" style="font-weight:700">0</div></div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="footer">
-      <button id="prev" class="btn muted">Prev</button>
-      <div style="flex:1"></div>
-      <button id="next" class="btn primary">Next</button>
-    </div>
-
-    <div id="result" class="hidden" style="margin-top:16px">
-      <p class="score">Skor: <span id="scoreVal">0</span> / <span id="totalQ">0</span></p>
-      <button id="restart" class="btn">Mulai Ulang</button>
-    </div>
+    <footer>Motif: Semen • Parang • Kawung • Mega Mendung • Truntum</footer>
   </div>
 
-  <script>
-    const qa = [
-      {q:"Ibu Pertiwi adalah sebutan untuk..", choices:["Presiden","Tanah air / negeri","Ibu negara","Sungai"], a:1},
-      {q:"Apa warna bendera Indonesia?", choices:["Merah Putih","Biru Putih","Hijau Kuning","Hitam Putih"], a:0},
-      {q:"Ibu kota Indonesia adalah..", choices:["Surabaya","Bandung","Jakarta","Medan"], a:2}
-    ];
+<script>
+/*
+ Puzzle Batik — 5 level, each level uses an inline SVG data URI as background.
+ We create 3x3 tiles by adjusting background-position for each tile.
+ Drag & Drop uses HTML5 drag/drop; tiles are draggable elements.
+*/
 
-    const stage = document.getElementById('stage');
-    const bar = document.getElementById('bar');
-    const prev = document.getElementById('prev');
-    const next = document.getElementById('next');
-    const result = document.getElementById('result');
-    const scoreVal = document.getElementById('scoreVal');
-    const totalQ = document.getElementById('totalQ');
-    const restart = document.getElementById('restart');
+const MOTIFS = [
+  { id: 'semen', name: 'Semen', hint: 'Motif semen: pola berulang kecil seperti butiran.' , svg: svgSemen() },
+  { id: 'parang', name: 'Parang', hint: 'Parang: pola diagonal bersambung (garis miring panjang).' , svg: svgParang() },
+  { id: 'kawung', name: 'Kawung', hint: 'Kawung: pola lingkaran/lobus berulang menyerupai buah kolang-kaling.' , svg: svgKawung() },
+  { id: 'mega', name: 'Mega Mendung', hint: 'Mega Mendung: bentuk awan bergelombang khas dari Cirebon.' , svg: svgMega() },
+  { id: 'truntum', name: 'Truntum', hint: 'Truntum: motif bintang kecil yang tersebar, sering dipakai untuk simbol cinta.' , svg: svgTruntum() }
+];
 
-    let idx = 0;
-    let answers = Array(qa.length).fill(null);
+const COLS = 3;
+const ROWS = 3;
+const LEVELS = MOTIFS.length;
 
-    totalQ.textContent = qa.length;
+let state = {
+  levelIndex: 0,
+  moves: 0,
+  score: 0
+};
 
-    function render() {
-      const item = qa[idx];
-      stage.innerHTML = `
-        <div class="question" aria-live="polite"><strong>Soal ${idx+1}.</strong> ${item.q}</div>
-        <div class="choices">
-          ${item.choices.map((c,i)=>`<button data-i="${i}" ${answers[idx]===i?'aria-pressed="true"':''}>${c}</button>`).join('')}
-        </div>
-      `;
-      // update progress
-      const pct = Math.round((idx/qa.length)*100);
-      bar.style.width = pct + '%';
+const puzzleArea = document.getElementById('puzzleArea');
+const trayArea = document.getElementById('trayArea');
+const levelBadge = document.getElementById('levelBadge');
+const motifName = document.getElementById('motifName');
+const levelEl = document.getElementById('level');
+const movesEl = document.getElementById('moves');
+const scoreEl = document.getElementById('score');
+const hintText = document.getElementById('hintText');
 
-      // button states
-      prev.disabled = idx===0;
-      next.textContent = idx === qa.length-1 ? 'Submit' : 'Next';
+document.getElementById('hintBtn').addEventListener('click', toggleHint);
+document.getElementById('restartBtn').addEventListener('click', restart);
+document.getElementById('nextBtn').addEventListener('click', nextLevel);
 
-      // attach choice handlers
-      stage.querySelectorAll('.choices button').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const choice = Number(btn.dataset.i);
-          answers[idx] = choice;
-          // visual feedback
-          stage.querySelectorAll('.choices button').forEach(b=>b.style.borderColor='#ddd');
-          btn.style.borderColor='#2563eb';
-        });
-      });
+function init(){
+  renderLevel();
+}
+
+function renderLevel(){
+  const motif = MOTIFS[state.levelIndex];
+  levelBadge.textContent = `Level ${state.levelIndex+1}`;
+  motifName.textContent = motif.name;
+  levelEl.textContent = `${state.levelIndex+1} / ${LEVELS}`;
+  hintText.textContent = motif.hint;
+  hintText.classList.add('hidden');
+  state.moves = 0; movesEl.textContent = state.moves;
+
+  createSlotsAndTiles(motif.svg);
+  // reset next button text
+  document.getElementById('nextBtn').textContent = state.levelIndex === LEVELS-1 ? 'Selesai' : 'Next Level';
+}
+
+function createSlotsAndTiles(dataUri){
+  puzzleArea.innerHTML = '';
+  trayArea.innerHTML = '';
+
+  // create empty slots (target grid)
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.dataset.row = r; slot.dataset.col = c;
+      slot.dataset.accept = 'tile';
+      slot.addEventListener('dragover', e=>e.preventDefault());
+      slot.addEventListener('drop', onSlotDrop);
+      puzzleArea.appendChild(slot);
     }
+  }
 
-    prev.addEventListener('click', ()=>{
-      if(idx>0){ idx--; render(); }
-    });
+  // build tile objects: we need to create a tile for each coordinate with background-position
+  const tileCount = ROWS * COLS;
+  let tiles = [];
+  for(let idx=0; idx<tileCount; idx++){
+    const r = Math.floor(idx / COLS);
+    const c = idx % COLS;
+    tiles.push({id: idx, r, c});
+  }
 
-    next.addEventListener('click', ()=>{
-      if(idx < qa.length-1){
-        idx++; render();
-      } else {
-        // Submit
-        if(answers.includes(null)){
-          if(!confirm('Beberapa jawaban kosong. Tetap submit?')) return;
-        }
-        showResult();
+  // shuffle tiles for tray
+  const shuffled = shuffle([...tiles]);
+
+  // tray: draggable pieces
+  shuffled.forEach(t => {
+    const tileEl = makeTileEl(dataUri, t.r, t.c, t.id);
+    tileEl.draggable = true;
+    tileEl.addEventListener('dragstart', onDragStart);
+    tileEl.addEventListener('touchstart', onTouchStart, {passive:false});
+    tileEl.addEventListener('touchmove', onTouchMove, {passive:false});
+    tileEl.addEventListener('touchend', onTouchEnd, {passive:false});
+    trayArea.appendChild(tileEl);
+  });
+}
+
+// create a tile element showing fragment at row r,col c
+function makeTileEl(dataUri, r, c, id){
+  const tile = document.createElement('div');
+  tile.className = 'tile';
+  tile.dataset.r = r; tile.dataset.c = c; tile.dataset.id = id;
+  // CSS background-position calculation:
+  // background-size is full puzzle area; background-position must shift so fragment shows.
+  // We'll calculate percent positions.
+  const pxSize = getComputedStyle(document.documentElement).getPropertyValue('--size') || '330px';
+  // Use percentage: (col / (cols-1)) * 100% but because background-size equals full image size without padding, we can use:
+  const posX = (c / (COLS - 1)) * 100;
+  const posY = (r / (ROWS - 1)) * 100;
+  // background-position expects percentages with center points, but to pin piece we use calc trick:
+  tile.style.backgroundImage = `url("${dataUri}")`;
+  tile.style.backgroundPosition = `${posX}% ${posY}%`;
+  tile.style.backgroundClip = 'content-box';
+  return tile;
+}
+
+// drag/drop handlers
+let draggingId = null;
+
+function onDragStart(e){
+  draggingId = this.dataset.id;
+  e.dataTransfer.setData('text/plain', draggingId);
+  // small transparent image for better UX
+  const crt = this.cloneNode(true);
+  crt.style.width = '120px'; crt.style.height = '120px';
+  document.body.appendChild(crt);
+  e.dataTransfer.setDragImage(crt, 60, 60);
+  setTimeout(()=>document.body.removeChild(crt), 0);
+}
+
+function onSlotDrop(e){
+  e.preventDefault();
+  const slot = this;
+  const id = e.dataTransfer.getData('text/plain');
+  const tileEl = findTileById(id);
+  if(!tileEl) return;
+  // if slot already has a tile, swap it to tray
+  if(slot.firstElementChild){
+    // move existing tile back to tray
+    trayArea.appendChild(slot.firstElementChild);
+  }
+  slot.appendChild(tileEl);
+  tilePlaced();
+}
+
+// find tile element by dataset.id (either in tray or in any slot)
+function findTileById(id){
+  return document.querySelector(`.tile[data-id="${id}"]`);
+}
+
+// simple shuffle
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// check if puzzle complete
+function tilePlaced(){
+  state.moves++;
+  movesEl.textContent = state.moves;
+  // check each slot: if slot has child and its tile's r/c equal to slot r/c then good
+  const slots = Array.from(document.querySelectorAll('.slot'));
+  let correct = 0;
+  slots.forEach(slot=>{
+    const child = slot.firstElementChild;
+    if(child){
+      if(child.dataset.r == slot.dataset.row && child.dataset.c == slot.dataset.col){
+        correct++;
       }
-    });
-
-    function showResult(){
-      let score = 0;
-      answers.forEach((ans,i)=>{ if(ans===qa[i].a) score++; });
-      scoreVal.textContent = score;
-      document.getElementById('bar').style.width = '100%';
-      result.classList.remove('hidden');
-      // hide stage & nav
-      stage.classList.add('hidden');
-      prev.style.display = 'none';
-      next.style.display = 'none';
     }
+  });
+  if(correct === slots.length){
+    // success!
+    setTimeout(()=> {
+      state.score += Math.max(10, 50 - state.moves); // award
+      scoreEl.textContent = state.score;
+      alert(`Selamat! Kamu menyelesaikan level ${state.levelIndex+1} (${MOTIFS[state.levelIndex].name}).`);
+      // auto advance if not last
+      if(state.levelIndex < LEVELS -1){
+        state.levelIndex++;
+        renderLevel();
+      } else {
+        alert('Kamu menyelesaikan semua level! 🎉');
+      }
+    }, 150);
+  }
+}
 
-    restart.addEventListener('click', ()=>{
-      idx = 0; answers = Array(qa.length).fill(null); result.classList.add('hidden');
-      stage.classList.remove('hidden'); prev.style.display='inline-block'; next.style.display='inline-block';
-      render();
-    });
+// next level / restart handlers
+function nextLevel(){
+  if(state.levelIndex < LEVELS -1){
+    state.levelIndex++;
+    renderLevel();
+  } else {
+    alert('Ini level terakhir. Gunakan Restart untuk mengulang semua level.');
+  }
+}
 
-    // initial render
-    render();
-  </script>
+function restart(){
+  if(confirm('Mulai ulang level ini?')){
+    renderLevel();
+  }
+}
+
+function toggleHint(){
+  hintText.classList.toggle('hidden');
+}
+
+// Touch drag fallback (for mobile) — implement simple drag-to-slot by tracking touch and placing on closest slot
+let touchState = {el:null, startX:0, startY:0, origParent:null, clone:null};
+function onTouchStart(e){
+  e.preventDefault();
+  const t = e.touches[0];
+  touchState.el = this;
+  touchState.startX = t.clientX; touchState.startY = t.clientY;
+  touchState.origParent = this.parentElement;
+  // create clone for moving
+  touchState.clone = this.cloneNode(true);
+  touchState.clone.style.position='fixed';
+  touchState.clone.style.left=(t.clientX-45)+'px';
+  touchState.clone.style.top=(t.clientY-45)+'px';
+  touchState.clone.style.width='90px'; touchState.clone.style.height='90px';
+  touchState.clone.style.zIndex=9999;
+  document.body.appendChild(touchState.clone);
+  this.style.opacity = 0.35;
+}
+function onTouchMove(e){
+  if(!touchState.clone) return;
+  const t = e.touches[0];
+  touchState.clone.style.left=(t.clientX-45)+'px';
+  touchState.clone.style.top=(t.clientY-45)+'px';
+}
+function onTouchEnd(e){
+  if(!touchState.clone) return;
+  // find nearest slot at touch end
+  const rects = Array.from(document.querySelectorAll('.slot')).map(s=>({el:s, r:s.getBoundingClientRect()}));
+  const t = e.changedTouches[0];
+  let nearest = null; let bestDist = Infinity;
+  rects.forEach(o=>{
+    const cx = o.r.left + o.r.width/2;
+    const cy = o.r.top + o.r.height/2;
+    const d = Math.hypot(cx - t.clientX, cy - t.clientY);
+    if(d < bestDist){ bestDist = d; nearest = o.el; }
+  });
+  if(nearest && bestDist < 200){
+    // if slot has a tile, move it back to tray
+    if(nearest.firstElementChild){
+      trayArea.appendChild(nearest.firstElementChild);
+    }
+    nearest.appendChild(touchState.el);
+    tilePlaced();
+  } else {
+    // return to tray
+    trayArea.appendChild(touchState.el);
+  }
+  // cleanup
+  touchState.el.style.opacity = 1;
+  document.body.removeChild(touchState.clone);
+  touchState = {el:null, startX:0, startY:0, origParent:null, clone:null};
+}
+
+// helper to find tile element (fallback)
+function findTileById(id){
+  return document.querySelector(`.tile[data-id="${id}"]`);
+}
+
+/* SVG motif generators: return SVG as data URI (encoded) */
+function encodeSVG(svgString){
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgString);
+}
+
+/* -- Motif SVGs (stylized/illustrative) -- */
+function svgSemen(){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'>
+  <rect width="100%" height="100%" fill="#fff8f0"/>
+  <g fill="#1f2937" opacity="0.92">
+    <!-- repeating small elements -->
+    ${generateGridDots(10, 10, 20, `<circle cx="{x}" cy="{y}" r="6" />`)}
+  </g>
+</svg>`;
+  return encodeSVG(svg);
+}
+
+function svgParang(){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'>
+  <rect width="100%" height="100%" fill="#fff"/>
+  <g stroke="#0f172a" stroke-width="8" stroke-linecap="round" fill="none">
+    <path d="M-40 260 L80 20 L200 260 L320 20" />
+    <path d="M-10 260 L110 20 L230 260 L350 20" opacity="0.9"/>
+  </g>
+  <g fill="#0f172a" opacity="0.06">
+    <rect x="0" y="0" width="300" height="300"/>
+  </g>
+</svg>`;
+  return encodeSVG(svg);
+}
+
+function svgKawung(){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'>
+  <rect width="100%" height="100%" fill="#fff7f3"/>
+  <g fill="#0b2545">
+    ${generateGridDots(4,4,70, `<ellipse cx="{x}" cy="{y}" rx="24" ry="18" />`)}
+  </g>
+</svg>`;
+  return encodeSVG(svg);
+}
+
+function svgMega(){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'>
+  <rect width="100%" height="100%" fill="#eef2ff"/>
+  <g fill="#163172">
+    ${generateMegaClouds()}
+  </g>
+</svg>`;
+  return encodeSVG(svg);
+}
+
+function svgTruntum(){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'>
+  <rect width="100%" height="100%" fill="#fffaf0"/>
+  <g fill="#102a43">
+    ${generateStars(30)}
+  </g>
+</svg>`;
+  return encodeSVG(svg);
+}
+
+/* Helpers for generating repeated patterns as string fragments */
+function generateGridDots(cols, rows, spacing, template){
+  let out = '';
+  const startX = 20, startY=20;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const x = startX + c*spacing;
+      const y = startY + r*spacing;
+      out += template.replace('{x}', x).replace('{y}', y);
+    }
+  }
+  return out;
+}
+
+function generateMegaClouds(){
+  // a few cloud shapes arranged
+  const clouds = [
+    `<path d="M10 120 q40 -80 100 -40 q30 -40 80 0 q30 -10 50 30 q-10 40 -40 40 q-60 20 -140 -30 z" />`,
+    `<path d="M-10 200 q70 -90 150 -50 q30 -60 80 -20 q-10 60 -70 70 q-80 20 -160 0 z" opacity="0.85"/>`
+  ];
+  return clouds.join('\n');
+}
+
+function generateStars(n){
+  let out = '';
+  for(let i=0;i<n;i++){
+    const x = Math.floor(Math.random()*280)+10;
+    const y = Math.floor(Math.random()*280)+10;
+    const r = Math.floor(Math.random()*4)+2;
+    out += `<circle cx="${x}" cy="${y}" r="${r}" />`;
+  }
+  return out;
+}
+
+/* Initialize */
+init();
+
+</script>
 </body>
 </html>
